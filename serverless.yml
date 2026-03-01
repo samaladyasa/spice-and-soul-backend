@@ -1,0 +1,297 @@
+useDotenv: true
+service: spice-and-soul
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ap-south-1
+  stage: ${opt:stage, 'dev'}
+  
+  environment:
+    DYNAMODB_TABLE_USERS: ${self:service}-users-${sls:stage}
+    DYNAMODB_TABLE_ORDERS: ${self:service}-orders-${sls:stage}
+    DYNAMODB_TABLE_CODES: ${self:service}-codes-${sls:stage}
+    EMAIL_USER: ${env:EMAIL_USER}
+    EMAIL_PASSWORD: ${env:EMAIL_PASSWORD}
+    SES_FROM_EMAIL: ${env:SES_FROM_EMAIL, 'noreply@spiceandsoil.com'}
+    CORS_ORIGIN: ${env:CORS_ORIGIN, '*'}
+    JWT_SECRET: ${env:JWT_SECRET, 'your-secret-jwt-key-change-in-production'}
+    JWT_EXPIRY: ${env:JWT_EXPIRY, '24h'}
+    RAZORPAY_KEY_ID: ${env:RAZORPAY_KEY_ID}
+    RAZORPAY_KEY_SECRET: ${env:RAZORPAY_KEY_SECRET}
+    # AWS Cognito
+    COGNITO_REGION: ${env:COGNITO_REGION, 'ap-south-1'}
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID, ''}
+    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID, ''}
+    COGNITO_CLIENT_SECRET: ${env:COGNITO_CLIENT_SECRET, ''}
+
+  iam:
+    role:
+      statements:
+        # DynamoDB Users Table - Authentication
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_USERS}"
+        # DynamoDB Orders Table - Order Management
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:Query
+            - dynamodb:GetItem
+            - dynamodb:Scan
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_ORDERS}"
+        # DynamoDB Codes Table - Password Reset
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:GetItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_CODES}"
+        # SES for Emails (Password Reset & Reservations)
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"
+
+functions:
+  # Test endpoints
+  hello:
+    handler: handler.hello
+    timeout: 30
+    events:
+      - http:
+          path: /
+          method: get
+          cors: true
+
+  health:
+    handler: handler.health
+    timeout: 30
+    events:
+      - http:
+          path: health
+          method: get
+          cors: true
+
+  # Authentication
+  cognitoSignup:
+    handler: src/lambda/auth/cognitoHandlers.signupHandler
+    timeout: 30
+    events:
+      - http:
+          path: cognito/signup
+          method: post
+          cors: true
+
+  cognitoConfirmSignup:
+    handler: src/lambda/auth/cognitoHandlers.confirmSignupHandler
+    timeout: 30
+    events:
+      - http:
+          path: cognito/confirm-signup
+          method: post
+          cors: true
+
+  cognitoLogin:
+    handler: src/lambda/auth/cognitoHandlers.loginHandler
+    timeout: 30
+    events:
+      - http:
+          path: cognito/login
+          method: post
+          cors: true
+
+  cognitoForgotPassword:
+    handler: src/lambda/auth/cognitoForgotPasswordHandler.forgotPasswordHandler
+    timeout: 30
+    events:
+      - http:
+          path: cognito/forgot-password
+          method: post
+          cors: true
+
+  cognitoConfirmForgotPassword:
+    handler: src/lambda/auth/cognitoForgotPasswordHandler.confirmForgotPasswordHandler
+    timeout: 30
+    events:
+      - http:
+          path: cognito/confirm-forgot-password
+          method: post
+          cors: true
+
+  sendResetCode:
+    handler: src/lambda/auth/sendResetCode.handler
+    timeout: 30
+    events:
+      - http:
+          path: send-reset-code
+          method: post
+          cors: true
+
+  verifyResetCode:
+    handler: src/lambda/auth/verifyResetCode.handler
+    timeout: 30
+    events:
+      - http:
+          path: verify-reset-code
+          method: post
+          cors: true
+
+  resetPassword:
+    handler: src/lambda/auth/resetPassword.handler
+    timeout: 30
+    events:
+      - http:
+          path: reset-password
+          method: post
+          cors: true
+
+  # User Management
+  signup:
+    handler: src/lambda/users/signup.handler
+    timeout: 30
+    events:
+      - http:
+          path: signup
+          method: post
+          cors: true
+
+  login:
+    handler: src/lambda/users/login.handler
+    timeout: 30
+    events:
+      - http:
+          path: login
+          method: post
+          cors: true
+
+  # Orders
+  createOrder:
+    handler: src/lambda/orders/createOrder.handler
+    timeout: 30
+    events:
+      - http:
+          path: create-order
+          method: post
+          cors: true
+
+  getOrders:
+    handler: src/lambda/orders/getOrders.handler
+    timeout: 30
+    events:
+      - http:
+          path: orders/{email}
+          method: get
+          cors: true
+
+  # Admin Endpoints
+  adminGetUsers:
+    handler: src/lambda/admin/getUsers.handler
+    timeout: 30
+    events:
+      - http:
+          path: admin/users
+          method: get
+          cors: true
+
+  adminGetOrders:
+    handler: src/lambda/admin/getOrders.handler
+    timeout: 30
+    events:
+      - http:
+          path: admin/orders
+          method: get
+          cors: true
+
+  adminGetCodes:
+    handler: src/lambda/admin/getCodes.handler
+    timeout: 30
+    events:
+      - http:
+          path: admin/codes
+          method: get
+          cors: true
+
+  # Reservations
+  sendReservationSMS:
+    handler: src/lambda/reservations/sendReservationSMS.handler
+    timeout: 30
+    events:
+      - http:
+          path: reservation/confirm
+          method: post
+          cors: true
+
+  # Payments
+  createRazorpayOrder:
+    handler: src/lambda/payments/createRazorpayOrder.handler
+    timeout: 30
+    events:
+      - http:
+          path: payment/create-order
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    # DynamoDB Tables
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_USERS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+
+    OrdersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_ORDERS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userEmail
+            AttributeType: S
+          - AttributeName: orderId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userEmail
+            KeyType: HASH
+          - AttributeName: orderId
+            KeyType: RANGE
+
+    VerificationCodesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_CODES}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: expiry
+          Enabled: true
+
+plugins: []
+
+custom: {}
+
+
