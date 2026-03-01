@@ -1,0 +1,41 @@
+service: spice-and-soul
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: local
+
+functions:
+  # Test endpoints
+  hello:
+    handler: handler.hello
+
+  health:
+    handler: handler.health
+
+  # Authentication
+  sendResetCode:
+    handler: src/lambda/auth/sendResetCode.handler
+
+  verifyResetCode:
+    handler: src/lambda/auth/verifyResetCode.handler
+
+  resetPassword:
+    handler: src/lambda/auth/resetPassword.handler
+
+  # User Management
+  signup:
+    handler: src/lambda/users/signup.handler
+
+  login:
+    handler: src/lambda/users/login.handler
+
+  # Orders
+  createOrder:
+    handler: src/lambda/orders/createOrder.handler
+
+  getOrders:
+    handler: src/lambda/orders/getOrders.handler
