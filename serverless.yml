@@ -1,0 +1,353 @@
+useDotenv: true
+service: spice-and-soul
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ap-south-1
+  stage: ${opt:stage, 'dev'}
+  timeout: 30
+  logRetentionInDays: 14
+
+  environment:
+    DYNAMODB_TABLE_ORDERS: ${self:service}-orders-${sls:stage}
+    DYNAMODB_TABLE_MENU_ITEMS: ${self:service}-menu-items-${sls:stage}
+    S3_MENU_IMAGES_BUCKET: ${self:service}-menu-images-${sls:stage}
+    S3_WEBSITE_BUCKET: ${self:service}-website-${sls:stage}
+    EMAIL_USER: ${env:EMAIL_USER}
+    EMAIL_PASSWORD: ${env:EMAIL_PASSWORD}
+    EMAIL_LOGO_URL: ${env:EMAIL_LOGO_URL, ''}
+    SES_FROM_EMAIL: ${env:SES_FROM_EMAIL, 'noreply@spiceandsoil.com'}
+    CORS_ORIGIN: ${env:CORS_ORIGIN, '*'}
+    RAZORPAY_KEY_ID: ${env:RAZORPAY_KEY_ID}
+    RAZORPAY_KEY_SECRET: ${env:RAZORPAY_KEY_SECRET}
+    COGNITO_REGION: ${env:COGNITO_REGION, 'ap-south-1'}
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID, 'ap-south-1_Z3gBFtjH8'}
+    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID, '1bg6dfeqdj2bfbfm3ndugtrrd8'}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:Query
+            - dynamodb:GetItem
+            - dynamodb:Scan
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_ORDERS}"
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:GetItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_MENU_ITEMS}"
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource: "arn:aws:s3:::${self:provider.environment.S3_MENU_IMAGES_BUCKET}/*"
+        - Effect: Allow
+          Action:
+            - cognito-idp:ListUsers
+          Resource: "arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}"
+
+functions:
+  hello:
+    handler: functions/hello/handler.hello
+    events:
+      - http:
+          path: /
+          method: get
+          cors: true
+
+  health:
+    handler: functions/hello/handler.health
+    events:
+      - http:
+          path: health
+          method: get
+          cors: true
+
+  menuGet:
+    handler: functions/menu/menuGet.main
+    events:
+      - http:
+          path: menu
+          method: get
+          cors: true
+
+  menuCreate:
+    handler: functions/menu/menuCreate.main
+    events:
+      - http:
+          path: menu
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  menuUpdate:
+    handler: functions/menu/menuUpdate.main
+    events:
+      - http:
+          path: menu/{itemId}
+          method: put
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  menuDelete:
+    handler: functions/menu/menuDelete.main
+    events:
+      - http:
+          path: menu/{itemId}
+          method: delete
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  menuUploadUrl:
+    handler: functions/menu/menuUploadUrl.main
+    events:
+      - http:
+          path: menu/upload-url
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  orderCreate:
+    handler: functions/orders/orderCreate.main
+    events:
+      - http:
+          path: orders
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  orderGet:
+    handler: functions/orders/orderGet.main
+    events:
+      - http:
+          path: orders
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  adminGetUsers:
+    handler: functions/admin/adminGetUsers.main
+    events:
+      - http:
+          path: admin/users
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  adminGetOrders:
+    handler: functions/admin/adminGetOrders.main
+    events:
+      - http:
+          path: admin/orders
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  reservationSend:
+    handler: functions/reservations/reservationSend.main
+    events:
+      - http:
+          path: reservation/confirm
+          method: post
+          cors: true
+
+  paymentCreate:
+    handler: functions/payments/paymentCreate.main
+    events:
+      - http:
+          path: payment/create-order
+          method: post
+          cors: true
+
+  cognitoCustomEmail:
+    handler: functions/cognito/cognitoCustomEmail.handler
+
+resources:
+  Resources:
+    CognitoAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: CognitoAuthorizer
+        Type: COGNITO_USER_POOLS
+        IdentitySource: method.request.header.Authorization
+        RestApiId: !Ref ApiGatewayRestApi
+        ProviderARNs:
+          - !Sub arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}
+
+    OrdersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_ORDERS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userEmail
+            AttributeType: S
+          - AttributeName: orderId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userEmail
+            KeyType: HASH
+          - AttributeName: orderId
+            KeyType: RANGE
+
+    MenuItemsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_MENU_ITEMS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: itemId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: itemId
+            KeyType: HASH
+
+    MenuImagesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_MENU_IMAGES_BUCKET}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - PUT
+                - GET
+              AllowedOrigins:
+                - "*"
+              MaxAge: 3000
+
+    MenuImagesBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref MenuImagesBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action: "s3:GetObject"
+              Resource:
+                Fn::Sub: "arn:aws:s3:::${self:provider.environment.S3_MENU_IMAGES_BUCKET}/*"
+
+    WebsiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_WEBSITE_BUCKET}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: 404.html
+
+    WebsiteBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref WebsiteBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action: "s3:GetObject"
+              Resource:
+                Fn::Sub: "arn:aws:s3:::${self:provider.environment.S3_WEBSITE_BUCKET}/*"
+
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          Comment: Spice & Soul frontend CDN
+          DefaultRootObject: index.html
+          Origins:
+            - Id: S3WebsiteOrigin
+              DomainName:
+                Fn::Sub: "${self:provider.environment.S3_WEBSITE_BUCKET}.s3-website.${aws:region}.amazonaws.com"
+              CustomOriginConfig:
+                HTTPPort: 80
+                OriginProtocolPolicy: http-only
+          DefaultCacheBehavior:
+            TargetOriginId: S3WebsiteOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+            DefaultTTL: 86400
+            MaxTTL: 31536000
+            MinTTL: 0
+          CustomErrorResponses:
+            - ErrorCode: 404
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+              ErrorCachingMinTTL: 300
+            - ErrorCode: 403
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+              ErrorCachingMinTTL: 300
+          ViewerCertificate:
+            CloudFrontDefaultCertificate: true
+          PriceClass: PriceClass_200
+
+  Outputs:
+    CloudFrontUrl:
+      Value:
+        Fn::Sub: "https://${CloudFrontDistribution.DomainName}"
+      Description: CloudFront HTTPS URL (production frontend)
+    WebsiteBucketName:
+      Value: !Ref WebsiteBucket
+      Description: S3 bucket for the React static website
+    WebsiteUrl:
+      Value:
+        Fn::Sub: "http://${self:provider.environment.S3_WEBSITE_BUCKET}.s3-website.${aws:region}.amazonaws.com"
+      Description: S3 website URL (origin for CloudFront)
+    ApiGatewayUrl:
+      Value:
+        Fn::Sub: "https://${ApiGatewayRestApi}.execute-api.${aws:region}.amazonaws.com/${sls:stage}"
+      Description: API Gateway base URL
+
+plugins: []
+
+custom:
+  websiteBucket: ${self:provider.environment.S3_WEBSITE_BUCKET}
