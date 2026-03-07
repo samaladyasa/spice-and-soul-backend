@@ -8,8 +8,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const LOGO_URL = process.env.EMAIL_LOGO_URL || "https://spice-and-soul-menu-images-dev.s3.ap-south-1.amazonaws.com/favicon.png";
-
 async function sendOrderConfirmationEmail(email, orderId, items, total) {
   const itemRows = items
     .map(
@@ -37,8 +35,7 @@ async function sendOrderConfirmationEmail(email, orderId, items, total) {
 
       <tr>
         <td style="background:linear-gradient(135deg,#d35400 0%,#ff9a56 100%);padding:36px 30px 28px;text-align:center;">
-          <img src="${LOGO_URL}" alt="Spice and Soul" width="48" height="48" style="display:block;margin:0 auto 8px;border-radius:50%;"/>
-          <h1 style="margin:12px 0 0;font-family:'Georgia','Times New Roman',serif;font-size:26px;color:#ffffff;font-weight:700;letter-spacing:0.5px;">Spice &amp; Soul</h1>
+          <h1 style="margin:0;font-family:'Georgia','Times New Roman',serif;font-size:26px;color:#ffffff;font-weight:700;letter-spacing:0.5px;">Spice &amp; Soul</h1>
           <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;">Authentic Indian Cuisine</p>
         </td>
       </tr>
@@ -118,8 +115,7 @@ async function sendReservationEmails({ name, email, phone, date, time, guests, r
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
       <tr>
         <td style="background:linear-gradient(135deg,#d35400 0%,#ff9a56 100%);padding:36px 30px 28px;text-align:center;">
-          <img src="${LOGO_URL}" alt="Spice and Soul" width="48" height="48" style="display:block;margin:0 auto 8px;border-radius:50%;"/>
-          <h1 style="margin:12px 0 0;font-family:'Georgia','Times New Roman',serif;font-size:26px;color:#ffffff;font-weight:700;">Spice &amp; Soul</h1>
+          <h1 style="margin:0;font-family:'Georgia','Times New Roman',serif;font-size:26px;color:#ffffff;font-weight:700;">Spice &amp; Soul</h1>
           <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;">Authentic Indian Cuisine</p>
         </td>
       </tr>
@@ -186,8 +182,7 @@ async function sendReservationEmails({ name, email, phone, date, time, guests, r
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
       <tr>
         <td style="background:linear-gradient(135deg,#d35400 0%,#ff9a56 100%);padding:28px 30px;text-align:center;">
-          <img src="${LOGO_URL}" alt="Spice and Soul" width="48" height="48" style="display:block;margin:0 auto 8px;border-radius:50%;"/>
-          <h1 style="margin:10px 0 0;font-family:'Georgia',serif;font-size:22px;color:#ffffff;font-weight:700;">New Table Reservation</h1>
+          <h1 style="margin:0;font-family:'Georgia',serif;font-size:22px;color:#ffffff;font-weight:700;">New Table Reservation</h1>
           <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:12px;letter-spacing:1px;text-transform:uppercase;">Spice &amp; Soul</p>
         </td>
       </tr>
