@@ -1,0 +1,5 @@
+{
+  "body": "{\"name\":\"Test User\",\"email\":\"user@example.com\",\"phone\":\"+91 9876543210\",\"date\":\"2026-03-10\",\"time\":\"20:00\",\"guests\":\"4\",\"requests\":\"Window seat please\"}",
+  "httpMethod": "POST",
+  "headers": {}
+}
