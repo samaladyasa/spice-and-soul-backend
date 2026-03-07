@@ -35,20 +35,16 @@ async function sendOrderConfirmationEmail(email, orderId, items, total) {
   <tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
-      <!-- Header -->
       <tr>
         <td style="background:linear-gradient(135deg,#d35400 0%,#ff9a56 100%);padding:36px 30px 28px;text-align:center;">
-          <img src="${LOGO_URL}" alt="&#127835;" width="48" height="48" style="display:block;margin:0 auto 8px;border-radius:50%;"/>
+          <img src="${LOGO_URL}" alt="Spice and Soul" width="48" height="48" style="display:block;margin:0 auto 8px;border-radius:50%;"/>
           <h1 style="margin:12px 0 0;font-family:'Georgia','Times New Roman',serif;font-size:26px;color:#ffffff;font-weight:700;letter-spacing:0.5px;">Spice &amp; Soul</h1>
           <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;">Authentic Indian Cuisine</p>
         </td>
       </tr>
-
-      <!-- Body -->
       <tr>
         <td style="padding:36px 40px 20px;">
 
-          <!-- Success badge -->
           <div style="text-align:center;margin:0 0 24px;">
             <span style="display:inline-block;background:#e8f8ef;color:#27ae60;font-size:14px;font-weight:700;padding:8px 20px;border-radius:20px;">
               ✓ Order Confirmed
@@ -58,7 +54,6 @@ async function sendOrderConfirmationEmail(email, orderId, items, total) {
           <h2 style="margin:0 0 4px;font-size:20px;color:#2c2c2c;font-weight:700;">Thank you for your order!</h2>
           <p style="margin:0 0 20px;color:#888;font-size:13px;">Order ID: <strong style="color:#d35400;">${orderId}</strong></p>
 
-          <!-- Items table -->
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border-radius:10px;overflow:hidden;border:1px solid #f0e8e0;">
             <tr style="background:#fef8f2;">
               <th style="padding:10px 12px;text-align:left;font-size:12px;color:#b07040;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Item</th>
@@ -68,7 +63,6 @@ async function sendOrderConfirmationEmail(email, orderId, items, total) {
             ${itemRows}
           </table>
 
-          <!-- Total -->
           <div style="background:linear-gradient(135deg,#fff8f3 0%,#ffeedd 100%);border-radius:10px;padding:16px 20px;text-align:right;margin:0 0 24px;">
             <span style="font-size:13px;color:#888;margin-right:12px;">Total</span>
             <span style="font-size:24px;font-weight:800;color:#d35400;">₹${total}</span>
@@ -80,14 +74,12 @@ async function sendOrderConfirmationEmail(email, orderId, items, total) {
         </td>
       </tr>
 
-      <!-- Divider -->
       <tr>
         <td style="padding:0 40px;">
           <hr style="border:none;border-top:1px solid #f0e8e0;margin:0;">
         </td>
       </tr>
 
-      <!-- Footer -->
       <tr>
         <td style="padding:20px 40px 28px;text-align:center;">
           <p style="margin:0 0 4px;font-size:13px;color:#d35400;font-weight:600;">Spice &amp; Soul Restaurant</p>
@@ -126,7 +118,7 @@ async function sendReservationEmails({ name, email, phone, date, time, guests, r
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
       <tr>
         <td style="background:linear-gradient(135deg,#d35400 0%,#ff9a56 100%);padding:36px 30px 28px;text-align:center;">
-          <img src="${LOGO_URL}" alt="&#127835;" width="48" height="48" style="display:block;margin:0 auto 8px;border-radius:50%;"/>
+          <img src="${LOGO_URL}" alt="Spice and Soul" width="48" height="48" style="display:block;margin:0 auto 8px;border-radius:50%;"/>
           <h1 style="margin:12px 0 0;font-family:'Georgia','Times New Roman',serif;font-size:26px;color:#ffffff;font-weight:700;">Spice &amp; Soul</h1>
           <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:13px;letter-spacing:1px;text-transform:uppercase;">Authentic Indian Cuisine</p>
         </td>
@@ -194,7 +186,7 @@ async function sendReservationEmails({ name, email, phone, date, time, guests, r
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
       <tr>
         <td style="background:linear-gradient(135deg,#d35400 0%,#ff9a56 100%);padding:28px 30px;text-align:center;">
-          <img src="${LOGO_URL}" alt="&#127835;" width="48" height="48" style="display:block;margin:0 auto 8px;border-radius:50%;"/>
+          <img src="${LOGO_URL}" alt="Spice and Soul" width="48" height="48" style="display:block;margin:0 auto 8px;border-radius:50%;"/>
           <h1 style="margin:10px 0 0;font-family:'Georgia',serif;font-size:22px;color:#ffffff;font-weight:700;">New Table Reservation</h1>
           <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:12px;letter-spacing:1px;text-transform:uppercase;">Spice &amp; Soul</p>
         </td>
