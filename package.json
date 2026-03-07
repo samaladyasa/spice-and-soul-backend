@@ -1,0 +1,23 @@
+{
+  "name": "spice-and-soul-backend",
+  "version": "2.0.0",
+  "description": "Serverless backend for Spice & Soul Restaurant on AWS",
+  "main": "handler.js",
+  "scripts": {
+    "test": "jest",
+    "deploy": "serverless deploy --config serverless.yml",
+    "deploy:dev": "serverless deploy --config serverless.yml --stage dev",
+    "deploy:prod": "serverless deploy --config serverless.yml --stage prod",
+    "list": "serverless list functions --config serverless.yml"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1400.0",
+    "nodemailer": "^8.0.0",
+    "razorpay": "^2.9.6",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "serverless": "^3.40.0"
+  }
+}
