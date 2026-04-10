@@ -7,40 +7,30 @@ provider:
   name: aws
   runtime: nodejs18.x
   region: ap-south-1
-  stage: ${opt:stage, 'dev'}
-  
+  stage: ${opt:stage, 'prod'}
+  timeout: 30
+  logRetentionInDays: 14
+
   environment:
-    DYNAMODB_TABLE_USERS: ${self:service}-users-${sls:stage}
     DYNAMODB_TABLE_ORDERS: ${self:service}-orders-${sls:stage}
-    DYNAMODB_TABLE_CODES: ${self:service}-codes-${sls:stage}
+    DYNAMODB_TABLE_MENU_ITEMS: ${self:service}-menu-items-${sls:stage}
+    DYNAMODB_TABLE_USERS: ${self:service}-users-${sls:stage}
+    S3_MENU_IMAGES_BUCKET: ${self:service}-menu-images-${sls:stage}
+    S3_WEBSITE_BUCKET: ${self:service}-website-${sls:stage}
     EMAIL_USER: ${env:EMAIL_USER}
     EMAIL_PASSWORD: ${env:EMAIL_PASSWORD}
+    EMAIL_LOGO_URL: ${env:EMAIL_LOGO_URL, ''}
     SES_FROM_EMAIL: ${env:SES_FROM_EMAIL, 'noreply@spiceandsoil.com'}
     CORS_ORIGIN: ${env:CORS_ORIGIN, '*'}
-    JWT_SECRET: ${env:JWT_SECRET, 'your-secret-jwt-key-change-in-production'}
-    JWT_EXPIRY: ${env:JWT_EXPIRY, '24h'}
     RAZORPAY_KEY_ID: ${env:RAZORPAY_KEY_ID}
     RAZORPAY_KEY_SECRET: ${env:RAZORPAY_KEY_SECRET}
-    # AWS Cognito
     COGNITO_REGION: ${env:COGNITO_REGION, 'ap-south-1'}
-    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID, ''}
-    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID, ''}
-    COGNITO_CLIENT_SECRET: ${env:COGNITO_CLIENT_SECRET, ''}
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID, 'ap-south-1_Z3gBFtjH8'}
+    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID, '1bg6dfeqdj2bfbfm3ndugtrrd8'}
 
   iam:
     role:
       statements:
-        # DynamoDB Users Table - Authentication
-        - Effect: Allow
-          Action:
-            - dynamodb:GetItem
-            - dynamodb:Query
-            - dynamodb:PutItem
-            - dynamodb:UpdateItem
-            - dynamodb:DeleteItem
-            - dynamodb:Scan
-          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_USERS}"
-        # DynamoDB Orders Table - Order Management
         - Effect: Allow
           Action:
             - dynamodb:PutItem
@@ -48,7 +38,6 @@ provider:
             - dynamodb:GetItem
             - dynamodb:Scan
           Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_ORDERS}"
-        # DynamoDB Codes Table - Password Reset
         - Effect: Allow
           Action:
             - dynamodb:PutItem
@@ -57,19 +46,30 @@ provider:
             - dynamodb:DeleteItem
             - dynamodb:Query
             - dynamodb:Scan
-          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_CODES}"
-        # SES for Emails (Password Reset & Reservations)
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_MENU_ITEMS}"
         - Effect: Allow
           Action:
-            - ses:SendEmail
-            - ses:SendRawEmail
-          Resource: "*"
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:GetItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_USERS}"
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource: "arn:aws:s3:::${self:provider.environment.S3_MENU_IMAGES_BUCKET}/*"
+        - Effect: Allow
+          Action:
+            - cognito-idp:ListUsers
+          Resource: "arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}"
 
 functions:
-  # Test endpoints
   hello:
-    handler: handler.hello
-    timeout: 30
+    handler: functions/read/handler.hello
     events:
       - http:
           path: /
@@ -77,187 +77,147 @@ functions:
           cors: true
 
   health:
-    handler: handler.health
-    timeout: 30
+    handler: functions/read/handler.health
     events:
       - http:
           path: health
           method: get
           cors: true
 
-  # Authentication
-  cognitoSignup:
-    handler: src/lambda/auth/cognitoHandlers.signupHandler
-    timeout: 30
+  menuGet:
+    handler: functions/read/menuGet.main
     events:
       - http:
-          path: cognito/signup
-          method: post
-          cors: true
-
-  cognitoConfirmSignup:
-    handler: src/lambda/auth/cognitoHandlers.confirmSignupHandler
-    timeout: 30
-    events:
-      - http:
-          path: cognito/confirm-signup
-          method: post
-          cors: true
-
-  cognitoLogin:
-    handler: src/lambda/auth/cognitoHandlers.loginHandler
-    timeout: 30
-    events:
-      - http:
-          path: cognito/login
-          method: post
-          cors: true
-
-  cognitoForgotPassword:
-    handler: src/lambda/auth/cognitoForgotPasswordHandler.forgotPasswordHandler
-    timeout: 30
-    events:
-      - http:
-          path: cognito/forgot-password
-          method: post
-          cors: true
-
-  cognitoConfirmForgotPassword:
-    handler: src/lambda/auth/cognitoForgotPasswordHandler.confirmForgotPasswordHandler
-    timeout: 30
-    events:
-      - http:
-          path: cognito/confirm-forgot-password
-          method: post
-          cors: true
-
-  sendResetCode:
-    handler: src/lambda/auth/sendResetCode.handler
-    timeout: 30
-    events:
-      - http:
-          path: send-reset-code
-          method: post
-          cors: true
-
-  verifyResetCode:
-    handler: src/lambda/auth/verifyResetCode.handler
-    timeout: 30
-    events:
-      - http:
-          path: verify-reset-code
-          method: post
-          cors: true
-
-  resetPassword:
-    handler: src/lambda/auth/resetPassword.handler
-    timeout: 30
-    events:
-      - http:
-          path: reset-password
-          method: post
-          cors: true
-
-  # User Management
-  signup:
-    handler: src/lambda/users/signup.handler
-    timeout: 30
-    events:
-      - http:
-          path: signup
-          method: post
-          cors: true
-
-  login:
-    handler: src/lambda/users/login.handler
-    timeout: 30
-    events:
-      - http:
-          path: login
-          method: post
-          cors: true
-
-  # Orders
-  createOrder:
-    handler: src/lambda/orders/createOrder.handler
-    timeout: 30
-    events:
-      - http:
-          path: create-order
-          method: post
-          cors: true
-
-  getOrders:
-    handler: src/lambda/orders/getOrders.handler
-    timeout: 30
-    events:
-      - http:
-          path: orders/{email}
+          path: menu
           method: get
           cors: true
 
-  # Admin Endpoints
+  menuCreate:
+    handler: functions/create/menuCreate.main
+    events:
+      - http:
+          path: menu
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  menuUpdate:
+    handler: functions/update/menuUpdate.main
+    events:
+      - http:
+          path: menu/{itemId}
+          method: put
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  menuDelete:
+    handler: functions/delete/menuDelete.main
+    events:
+      - http:
+          path: menu/{itemId}
+          method: delete
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  menuUploadUrl:
+    handler: functions/create/menuUploadUrl.main
+    events:
+      - http:
+          path: menu/upload-url
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  orderCreate:
+    handler: functions/create/orderCreate.main
+    events:
+      - http:
+          path: orders
+          method: post
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
+  orderGet:
+    handler: functions/read/orderGet.main
+    events:
+      - http:
+          path: orders
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
+
   adminGetUsers:
-    handler: src/lambda/admin/getUsers.handler
-    timeout: 30
+    handler: functions/read/adminGetUsers.main
     events:
       - http:
           path: admin/users
           method: get
           cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
 
   adminGetOrders:
-    handler: src/lambda/admin/getOrders.handler
-    timeout: 30
+    handler: functions/read/adminGetOrders.main
     events:
       - http:
           path: admin/orders
           method: get
           cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref CognitoAuthorizer
 
-  adminGetCodes:
-    handler: src/lambda/admin/getCodes.handler
-    timeout: 30
-    events:
-      - http:
-          path: admin/codes
-          method: get
-          cors: true
-
-  # Reservations
-  sendReservationSMS:
-    handler: src/lambda/reservations/sendReservationSMS.handler
-    timeout: 30
+  reservationSend:
+    handler: functions/create/reservationSend.main
     events:
       - http:
           path: reservation/confirm
           method: post
           cors: true
 
-  # Payments
-  createRazorpayOrder:
-    handler: src/lambda/payments/createRazorpayOrder.handler
-    timeout: 30
+  paymentCreate:
+    handler: functions/create/paymentCreate.main
     events:
       - http:
           path: payment/create-order
           method: post
           cors: true
 
+  cognitoCustomEmail:
+    handler: functions/create/cognitoCustomEmail.handler
+
+  userSyncOnConfirm:
+    handler: functions/create/userSyncOnConfirm.handler
+    events:
+      - cognitoUserPool:
+          pool: User pool - o7h5bw
+          trigger: PostConfirmation
+          existing: true
+
 resources:
   Resources:
-    # DynamoDB Tables
-    UsersTable:
-      Type: AWS::DynamoDB::Table
+    CognitoAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
       Properties:
-        TableName: ${self:provider.environment.DYNAMODB_TABLE_USERS}
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: email
-            AttributeType: S
-        KeySchema:
-          - AttributeName: email
-            KeyType: HASH
+        Name: CognitoAuthorizer
+        Type: COGNITO_USER_POOLS
+        IdentitySource: method.request.header.Authorization
+        RestApiId: !Ref ApiGatewayRestApi
+        ProviderARNs:
+          - !Sub arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}
 
     OrdersTable:
       Type: AWS::DynamoDB::Table
@@ -275,23 +235,149 @@ resources:
           - AttributeName: orderId
             KeyType: RANGE
 
-    VerificationCodesTable:
+    MenuItemsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:provider.environment.DYNAMODB_TABLE_CODES}
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_MENU_ITEMS}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
-          - AttributeName: email
+          - AttributeName: itemId
             AttributeType: S
         KeySchema:
-          - AttributeName: email
+          - AttributeName: itemId
             KeyType: HASH
-        TimeToLiveSpecification:
-          AttributeName: expiry
+
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_USERS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: cognitoId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: cognitoId
+            KeyType: HASH
+
+    MenuImagesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_MENU_IMAGES_BUCKET}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - PUT
+                - GET
+              AllowedOrigins:
+                - "*"
+              MaxAge: 3000
+
+    MenuImagesBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref MenuImagesBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action: "s3:GetObject"
+              Resource:
+                Fn::Sub: "arn:aws:s3:::${self:provider.environment.S3_MENU_IMAGES_BUCKET}/*"
+
+    WebsiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_WEBSITE_BUCKET}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: 404.html
+
+    WebsiteBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref WebsiteBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action: "s3:GetObject"
+              Resource:
+                Fn::Sub: "arn:aws:s3:::${self:provider.environment.S3_WEBSITE_BUCKET}/*"
+
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
           Enabled: true
+          Comment: Spice & Soul frontend CDN
+          DefaultRootObject: index.html
+          Origins:
+            - Id: S3WebsiteOrigin
+              DomainName:
+                Fn::Sub: "${self:provider.environment.S3_WEBSITE_BUCKET}.s3-website.${aws:region}.amazonaws.com"
+              CustomOriginConfig:
+                HTTPPort: 80
+                OriginProtocolPolicy: http-only
+          DefaultCacheBehavior:
+            TargetOriginId: S3WebsiteOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+            DefaultTTL: 86400
+            MaxTTL: 31536000
+            MinTTL: 0
+          CustomErrorResponses:
+            - ErrorCode: 404
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+              ErrorCachingMinTTL: 300
+            - ErrorCode: 403
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+              ErrorCachingMinTTL: 300
+          ViewerCertificate:
+            CloudFrontDefaultCertificate: true
+          PriceClass: PriceClass_200
+
+  Outputs:
+    CloudFrontUrl:
+      Value:
+        Fn::Sub: "https://${CloudFrontDistribution.DomainName}"
+      Description: CloudFront HTTPS URL (production frontend)
+    WebsiteBucketName:
+      Value: !Ref WebsiteBucket
+      Description: S3 bucket for the React static website
+    WebsiteUrl:
+      Value:
+        Fn::Sub: "http://${self:provider.environment.S3_WEBSITE_BUCKET}.s3-website.${aws:region}.amazonaws.com"
+      Description: S3 website URL (origin for CloudFront)
+    ApiGatewayUrl:
+      Value:
+        Fn::Sub: "https://${ApiGatewayRestApi}.execute-api.${aws:region}.amazonaws.com/${sls:stage}"
+      Description: API Gateway base URL
 
 plugins: []
 
-custom: {}
-
-
+custom:
+  websiteBucket: ${self:provider.environment.S3_WEBSITE_BUCKET}

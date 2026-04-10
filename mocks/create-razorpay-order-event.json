@@ -1,0 +1,5 @@
+{
+  "body": "{\"amount\":700,\"currency\":\"INR\"}",
+  "httpMethod": "POST",
+  "headers": {}
+}

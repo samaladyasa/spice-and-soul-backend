@@ -1,0 +1,15 @@
+{
+  "body": "{\"items\":[{\"name\":\"Butter Chicken\",\"qty\":2,\"price\":350}],\"total\":700,\"name\":\"Test User\",\"address\":\"123 Main St\",\"paymentMethod\":\"cod\"}",
+  "httpMethod": "POST",
+  "headers": {
+    "Authorization": "Bearer YOUR_TOKEN_HERE"
+  },
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        "sub": "12345678-1234-1234-1234-123456789012",
+        "email": "user@example.com"
+      }
+    }
+  }
+}
