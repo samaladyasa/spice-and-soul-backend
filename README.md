@@ -38,6 +38,36 @@ DynamoDB (Orders, MenuItems)
 
 **Admin** = Cognito JWT + `admin` group. **User** = Cognito JWT.
 
+## Functions Sorted By CRUD
+
+### Create
+
+- `functions/menu/menuCreate.js` -> `POST /menu`
+- `functions/orders/orderCreate.js` -> `POST /orders`
+
+### Read
+
+- `functions/menu/menuGet.js` -> `GET /menu`
+- `functions/orders/orderGet.js` -> `GET /orders`
+- `functions/admin/adminGetUsers.js` -> `GET /admin/users`
+- `functions/admin/adminGetOrders.js` -> `GET /admin/orders`
+
+### Update
+
+- `functions/menu/menuUpdate.js` -> `PUT /menu/{itemId}`
+
+### Delete
+
+- `functions/menu/menuDelete.js` -> `DELETE /menu/{itemId}`
+
+### Non-CRUD / Utility
+
+- `functions/menu/menuUploadUrl.js` -> `POST /menu/upload-url` (generate S3 presigned upload URL)
+- `functions/reservations/reservationSend.js` -> `POST /reservation/confirm` (send reservation confirmation)
+- `functions/payments/paymentCreate.js` -> `POST /payment/create-order` (create Razorpay order)
+- `functions/hello/handler.js` -> `GET /` and `GET /health` (health checks)
+- `functions/cognito/cognitoCustomEmail.js` -> Cognito custom message trigger (not API Gateway CRUD)
+
 ## AWS Resources (managed by serverless.yml)
 
 - **DynamoDB**: OrdersTable, MenuItemsTable (PAY_PER_REQUEST)

@@ -1,8 +1,8 @@
 {
-  "body": "{\"name\":\"Paneer Tikka Updated\",\"price\":275}",
+  "body": "{\"name\":\"Butter Roti\",\"price\":20}",
   "httpMethod": "PUT",
   "pathParameters": {
-    "itemId": "ITEM-1234567890"
+    "itemId": "ITEM-1772472837070"
   },
   "headers": {
     "Authorization": "Bearer YOUR_TOKEN_HERE"

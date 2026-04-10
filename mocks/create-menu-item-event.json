@@ -1,5 +1,5 @@
 {
-  "body": "{\"name\":\"Paneer Tikka\",\"price\":250,\"img\":\"https://example.com/paneer.jpg\",\"alt\":\"Paneer Tikka\",\"rating\":\"★★★★☆ 4.5\",\"desc\":\"Marinated cottage cheese grilled to perfection\",\"categories\":[\"vegetarian\",\"appetizer\"],\"section\":\"starters\"}",
+  "body": "{\"name\":\"Chicken chilai\",\"price\":250,\"img\":\"https://example.com/paneer.jpg\",\"alt\":\"Chicken Chilai\",\"rating\":\"★★★★☆ 4.5\",\"desc\":\"Marinated chicken grilled to perfection\",\"categories\":[\"non-vegetarian\",\"appetizer\"],\"section\":\"starters\"}",
   "httpMethod": "POST",
   "headers": {
     "Authorization": "Bearer YOUR_TOKEN_HERE"

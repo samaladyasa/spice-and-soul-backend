@@ -7,13 +7,14 @@ provider:
   name: aws
   runtime: nodejs18.x
   region: ap-south-1
-  stage: ${opt:stage, 'dev'}
+  stage: ${opt:stage, 'prod'}
   timeout: 30
   logRetentionInDays: 14
 
   environment:
     DYNAMODB_TABLE_ORDERS: ${self:service}-orders-${sls:stage}
     DYNAMODB_TABLE_MENU_ITEMS: ${self:service}-menu-items-${sls:stage}
+    DYNAMODB_TABLE_USERS: ${self:service}-users-${sls:stage}
     S3_MENU_IMAGES_BUCKET: ${self:service}-menu-images-${sls:stage}
     S3_WEBSITE_BUCKET: ${self:service}-website-${sls:stage}
     EMAIL_USER: ${env:EMAIL_USER}
@@ -48,6 +49,15 @@ provider:
           Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_MENU_ITEMS}"
         - Effect: Allow
           Action:
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:GetItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource: "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE_USERS}"
+        - Effect: Allow
+          Action:
             - s3:PutObject
             - s3:GetObject
             - s3:DeleteObject
@@ -59,7 +69,7 @@ provider:
 
 functions:
   hello:
-    handler: functions/hello/handler.hello
+    handler: functions/read/handler.hello
     events:
       - http:
           path: /
@@ -67,7 +77,7 @@ functions:
           cors: true
 
   health:
-    handler: functions/hello/handler.health
+    handler: functions/read/handler.health
     events:
       - http:
           path: health
@@ -75,7 +85,7 @@ functions:
           cors: true
 
   menuGet:
-    handler: functions/menu/menuGet.main
+    handler: functions/read/menuGet.main
     events:
       - http:
           path: menu
@@ -83,7 +93,7 @@ functions:
           cors: true
 
   menuCreate:
-    handler: functions/menu/menuCreate.main
+    handler: functions/create/menuCreate.main
     events:
       - http:
           path: menu
@@ -94,7 +104,7 @@ functions:
             authorizerId: !Ref CognitoAuthorizer
 
   menuUpdate:
-    handler: functions/menu/menuUpdate.main
+    handler: functions/update/menuUpdate.main
     events:
       - http:
           path: menu/{itemId}
@@ -105,7 +115,7 @@ functions:
             authorizerId: !Ref CognitoAuthorizer
 
   menuDelete:
-    handler: functions/menu/menuDelete.main
+    handler: functions/delete/menuDelete.main
     events:
       - http:
           path: menu/{itemId}
@@ -116,7 +126,7 @@ functions:
             authorizerId: !Ref CognitoAuthorizer
 
   menuUploadUrl:
-    handler: functions/menu/menuUploadUrl.main
+    handler: functions/create/menuUploadUrl.main
     events:
       - http:
           path: menu/upload-url
@@ -127,7 +137,7 @@ functions:
             authorizerId: !Ref CognitoAuthorizer
 
   orderCreate:
-    handler: functions/orders/orderCreate.main
+    handler: functions/create/orderCreate.main
     events:
       - http:
           path: orders
@@ -138,7 +148,7 @@ functions:
             authorizerId: !Ref CognitoAuthorizer
 
   orderGet:
-    handler: functions/orders/orderGet.main
+    handler: functions/read/orderGet.main
     events:
       - http:
           path: orders
@@ -149,7 +159,7 @@ functions:
             authorizerId: !Ref CognitoAuthorizer
 
   adminGetUsers:
-    handler: functions/admin/adminGetUsers.main
+    handler: functions/read/adminGetUsers.main
     events:
       - http:
           path: admin/users
@@ -160,7 +170,7 @@ functions:
             authorizerId: !Ref CognitoAuthorizer
 
   adminGetOrders:
-    handler: functions/admin/adminGetOrders.main
+    handler: functions/read/adminGetOrders.main
     events:
       - http:
           path: admin/orders
@@ -171,7 +181,7 @@ functions:
             authorizerId: !Ref CognitoAuthorizer
 
   reservationSend:
-    handler: functions/reservations/reservationSend.main
+    handler: functions/create/reservationSend.main
     events:
       - http:
           path: reservation/confirm
@@ -179,7 +189,7 @@ functions:
           cors: true
 
   paymentCreate:
-    handler: functions/payments/paymentCreate.main
+    handler: functions/create/paymentCreate.main
     events:
       - http:
           path: payment/create-order
@@ -187,7 +197,15 @@ functions:
           cors: true
 
   cognitoCustomEmail:
-    handler: functions/cognito/cognitoCustomEmail.handler
+    handler: functions/create/cognitoCustomEmail.handler
+
+  userSyncOnConfirm:
+    handler: functions/create/userSyncOnConfirm.handler
+    events:
+      - cognitoUserPool:
+          pool: User pool - o7h5bw
+          trigger: PostConfirmation
+          existing: true
 
 resources:
   Resources:
@@ -227,6 +245,18 @@ resources:
             AttributeType: S
         KeySchema:
           - AttributeName: itemId
+            KeyType: HASH
+
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_USERS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: cognitoId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: cognitoId
             KeyType: HASH
 
     MenuImagesBucket:
